@@ -259,7 +259,7 @@ export class AzureBlob implements Storage {
 
     jsonFiles.sort((a, b) => resultsDir * (getTimestamp(a.lastModified) - getTimestamp(b.lastModified)));
 
-    const noFilters = !input?.project && !input?.level && !input?.pagination;
+    const noFilters = !input?.project && !input?.pagination;
     const resultFiles = noFilters ? handlePagination(jsonFiles, input?.pagination) : jsonFiles;
 
     const results = await processBatch<{ name: string }, Result>(this, resultFiles, this.batchSize, async (file) => {
@@ -276,13 +276,9 @@ export class AzureBlob implements Storage {
       return JSON.parse(Buffer.concat(chunks).toString());
     });
 
-    const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'level'];
+    const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project'];
 
     let filteredResults = results.filter((file) => (input?.project ? file.project === input.project : file));
-
-    if (input?.level) {
-      filteredResults = filteredResults.filter((result) => result.level === input.level);
-    }
 
     if (input?.tags && input.tags.length > 0) {
       filteredResults = filteredResults.filter((result) => {
@@ -396,10 +392,6 @@ export class AzureBlob implements Storage {
 
     let filteredReports = withMetadata;
 
-    if (input?.level) {
-      filteredReports = filteredReports.filter((report) => report.level === input.level);
-    }
-
     if (input?.search && input.search.trim()) {
       const searchTerm = input.search.toLowerCase().trim();
 
@@ -411,17 +403,7 @@ export class AzureBlob implements Storage {
           ...Object.entries(report)
             .filter(
               ([key]) =>
-                ![
-                  'reportID',
-                  'title',
-                  'createdAt',
-                  'size',
-                  'sizeBytes',
-                  'project',
-                  'level',
-                  'reportUrl',
-                  'stats',
-                ].includes(key),
+                !['reportID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'reportUrl', 'stats'].includes(key),
             )
             .map(([key, value]) => `${key}: ${value}`),
         ].filter(Boolean);
@@ -586,7 +568,6 @@ export class AzureBlob implements Storage {
       resultID,
       createdAt: new Date().toISOString(),
       project: resultDetails?.project ?? '',
-      level: resultDetails?.level ?? '',
       ...resultDetails,
       size: bytesToString(size),
       sizeBytes: size,

@@ -1,7 +1,7 @@
 import { PassThrough, Readable } from 'node:stream';
 
 import { withError } from '../withError';
-import { bytesToString, getUniqueLevelsList, getUniqueProjectsList } from '../storage/format';
+import { bytesToString, getUniqueProjectsList } from '../storage/format';
 import { serveReportRoute } from '../constants';
 import { DEFAULT_STREAM_CHUNK_SIZE } from '../storage/constants';
 
@@ -50,18 +50,11 @@ class Service {
 
     if (cached.length && shouldUseCache) {
       console.log(`[service] using cached reports`);
-      // NB: `level` is intentionally excluded here — a level-only query must let all reports through
-      // this initial pass so the dedicated level filter below can narrow them (project/ids gate broad inclusion).
       const noFilters = !input?.project && !input?.ids;
       const shouldFilterByProject = (report: ReportHistory) => input?.project && report.project === input.project;
       const shouldFilterByID = (report: ReportHistory) => input?.ids?.includes(report.reportID);
 
       let reports = cached.filter((report) => noFilters || shouldFilterByProject(report) || shouldFilterByID(report));
-
-      // Filter by level (testing level) if provided
-      if (input?.level) {
-        reports = reports.filter((report) => report.level === input.level);
-      }
 
       // Filter by search if provided
       if (input?.search?.trim()) {
@@ -76,17 +69,9 @@ class Service {
             ...Object.entries(report)
               .filter(
                 ([key]) =>
-                  ![
-                    'reportID',
-                    'title',
-                    'createdAt',
-                    'size',
-                    'sizeBytes',
-                    'project',
-                    'level',
-                    'reportUrl',
-                    'stats',
-                  ].includes(key),
+                  !['reportID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'reportUrl', 'stats'].includes(
+                    key,
+                  ),
               )
               .map(([key, value]) => `${key}: ${value}`),
           ].filter(Boolean);
@@ -238,12 +223,6 @@ class Service {
     return projects;
   }
 
-  public async getReportsLevels(): Promise<string[]> {
-    const { reports } = await this.getReports();
-
-    return getUniqueLevelsList(reports);
-  }
-
   public async getResults(input?: ReadResultsInput): Promise<ReadResultsOutput> {
     console.log(`[results service] getResults`);
     const cached = this.shouldUseServerCache() && resultCache.initialized ? resultCache.getAll() : [];
@@ -263,10 +242,6 @@ class Service {
       ? cached.filter((file) => (input?.project ? file.project === input.project : file))
       : cached;
 
-    if (input?.level) {
-      filtered = filtered.filter((file) => file.level === input.level);
-    }
-
     if (input?.testRun) {
       filtered = filtered.filter((file) => file.testRun === input.testRun);
     }
@@ -285,7 +260,7 @@ class Service {
 
     // Filter by tags if provided
     if (input?.tags && input.tags.length > 0) {
-      const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'level'];
+      const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project'];
 
       filtered = filtered.filter((result) => {
         const resultTags = Object.entries(result)
@@ -307,9 +282,7 @@ class Service {
           result.resultID,
           result.project,
           ...Object.entries(result)
-            .filter(
-              ([key]) => !['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'level'].includes(key),
-            )
+            .filter(([key]) => !['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project'].includes(key))
             .map(([key, value]) => `${key}: ${value}`),
         ].filter(Boolean);
 
@@ -410,19 +383,10 @@ class Service {
     return Array.from(new Set([...projects, ...reportProjects]));
   }
 
-  public async getResultsLevels(): Promise<string[]> {
-    const { results } = await this.getResults();
-    const resultLevels = getUniqueLevelsList(results);
-
-    const reportLevels = await this.getReportsLevels();
-
-    return Array.from(new Set([...resultLevels, ...reportLevels]));
-  }
-
   public async getResultsTags(project?: string): Promise<string[]> {
     const { results } = await this.getResults(project ? { project } : undefined);
 
-    const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'level'];
+    const notMetadataKeys = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project'];
     const allTags = new Set<string>();
 
     results.forEach((result) => {

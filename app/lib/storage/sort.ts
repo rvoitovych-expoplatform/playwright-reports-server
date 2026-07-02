@@ -1,25 +1,11 @@
 import { type Report, type Result, type ReportHistory, type SortOrder } from './types';
 
-export type ReportSortField = 'createdAt' | 'title' | 'project' | 'level' | 'passRate' | 'size';
-export type ResultSortField = 'createdAt' | 'title' | 'project' | 'level' | 'tags' | 'size';
+export type ReportSortField = 'createdAt' | 'title' | 'project' | 'passRate' | 'size';
+export type ResultSortField = 'createdAt' | 'title' | 'project' | 'tags' | 'size';
 
-export const REPORT_SORT_FIELDS: readonly ReportSortField[] = [
-  'createdAt',
-  'title',
-  'project',
-  'level',
-  'passRate',
-  'size',
-];
+export const REPORT_SORT_FIELDS: readonly ReportSortField[] = ['createdAt', 'title', 'project', 'passRate', 'size'];
 
-export const RESULT_SORT_FIELDS: readonly ResultSortField[] = [
-  'createdAt',
-  'title',
-  'project',
-  'level',
-  'tags',
-  'size',
-];
+export const RESULT_SORT_FIELDS: readonly ResultSortField[] = ['createdAt', 'title', 'project', 'tags', 'size'];
 
 export const parseReportSortField = (value: string | null | undefined): ReportSortField | undefined =>
   (REPORT_SORT_FIELDS as readonly string[]).includes(value ?? '') ? (value as ReportSortField) : undefined;
@@ -34,7 +20,7 @@ const toTimestamp = (date?: Date | string) => {
   return date.getTime();
 };
 
-const RESULT_METADATA_EXCLUDE = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project', 'level'];
+const RESULT_METADATA_EXCLUDE = ['resultID', 'title', 'createdAt', 'size', 'sizeBytes', 'project'];
 
 const resultTagsString = (item: Result): string =>
   Object.entries(item)
@@ -63,8 +49,6 @@ export const getReportSortValue = (item: ReportHistory, field: ReportSortField):
       return (item.title ?? item.reportID ?? '').toLowerCase();
     case 'project':
       return (item.project ?? '').toLowerCase();
-    case 'level':
-      return (item.level ?? '').toLowerCase();
     case 'passRate':
       return reportPassRate(item);
     case 'size':
@@ -80,8 +64,6 @@ export const getResultSortValue = (item: Result, field: ResultSortField): number
       return (item.title ?? item.resultID ?? '').toLowerCase();
     case 'project':
       return (item.project ?? '').toLowerCase();
-    case 'level':
-      return (item.level ?? '').toLowerCase();
     case 'tags':
       return resultTagsString(item);
     case 'size':

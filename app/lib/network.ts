@@ -1,4 +1,4 @@
-import { defaultLevelName, defaultProjectName } from './constants';
+import { defaultProjectName } from './constants';
 
 export class CommonResponseFactory {
   static buildUnauthorizedResponse(): Response {
@@ -9,10 +9,6 @@ export class CommonResponseFactory {
 export const withQueryParams = (url: string, params: Record<string, string>): string => {
   if (params?.project === defaultProjectName) {
     delete params.project;
-  }
-
-  if (params?.level === defaultLevelName) {
-    delete params.level;
   }
 
   const searchParams = new URLSearchParams(params);
